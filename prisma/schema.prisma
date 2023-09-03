@@ -1,27 +1,40 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id       String  @id @default(uuid())
-  name     String
-  email    String  @unique
-  password String
-  role     String  @default("user")
-  photo    String  @default("default.png")
-  verified Boolean @default(false)
-  provider String  @default("local")
+model UserSession {
+  Id          Int      @id @default(autoincrement())
+  userId      Int      @unique
+  accessToken String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
 
-  createdAt DateTime
+model ProfileVisit {
+  id        Int      @id @default(autoincrement())
+  visitorId Int
+  visitedId Int
+  createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  visitor   User     @relation(fields: [visitorId], references: [id])
 
-  @@map(name: "users")
+  @@unique([visitorId, visitedId])
+}
+
+model User {
+  id           Int            @id
+  username     String         @unique
+  name         String?
+  email        String?        @unique
+  profilePic   String         @default("default.png")
+  bio          String?
+  followers    Int
+  following    Int
+  visitCount   Int
+  lastVisitors ProfileVisit[]
 }

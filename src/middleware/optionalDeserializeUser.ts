@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { prisma } from "../utils/prisma";
 
-export const deserializeUser = async (
+export const optionalDeserializeUser = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -19,20 +19,14 @@ export const deserializeUser = async (
     }
 
     if (!token) {
-      return res.status(401).json({
-        status: "fail",
-        message: "You are not logged in",
-      });
+      return next();
     }
 
     const JWT_SECRET = process.env.JWT_SECRET as unknown as string;
     const decoded = jwt.verify(token, JWT_SECRET);
 
     if (!decoded) {
-      return res.status(401).json({
-        status: "fail",
-        message: "Invalid token or user doesn't exist",
-      });
+      return next();
     }
 
     const user = await prisma.user.findUnique({
@@ -40,10 +34,7 @@ export const deserializeUser = async (
     });
 
     if (!user) {
-      return res.status(401).json({
-        status: "fail",
-        message: "User with that token no longer exist",
-      });
+      return next();
     }
 
     res.locals.user = user;

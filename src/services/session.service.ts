@@ -1,101 +1,16 @@
 import axios from "axios";
 import qs from "qs";
 
-const GOOGLE_OAUTH_CLIENT_ID = process.env
-  .GOOGLE_OAUTH_CLIENT_ID as unknown as string;
-const GOOGLE_OAUTH_CLIENT_SECRET = process.env
-  .GOOGLE_OAUTH_CLIENT_SECRET as unknown as string;
-const GOOGLE_OAUTH_REDIRECT = process.env
-  .GOOGLE_OAUTH_REDIRECT as unknown as string;
-
 const GITHUB_OAUTH_CLIENT_ID = process.env
   .GITHUB_OAUTH_CLIENT_ID as unknown as string;
 const GITHUB_OAUTH_CLIENT_SECRET = process.env
   .GITHUB_OAUTH_CLIENT_SECRET as unknown as string;
 
-interface GoogleOauthToken {
-  access_token: string;
-  id_token: string;
-  expires_in: number;
-  refresh_token: string;
-  token_type: string;
-  scope: string;
-}
-
-export const getGoogleOauthToken = async ({
-  code,
-}: {
-  code: string;
-}): Promise<GoogleOauthToken> => {
-  const rootURl = "https://oauth2.googleapis.com/token";
-
-  const options = {
-    code,
-    client_id: GOOGLE_OAUTH_CLIENT_ID,
-    client_secret: GOOGLE_OAUTH_CLIENT_SECRET,
-    redirect_uri: GOOGLE_OAUTH_REDIRECT,
-    grant_type: "authorization_code",
-  };
-  try {
-    const { data } = await axios.post<GoogleOauthToken>(
-      rootURl,
-      qs.stringify(options),
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-      }
-    );
-
-    return data;
-  } catch (err: any) {
-    console.log("Failed to fetch Google Oauth Tokens");
-    throw new Error(err);
-  }
-};
-
-interface GoogleUserResult {
-  id: string;
-  email: string;
-  verified_email: boolean;
-  name: string;
-  given_name: string;
-  family_name: string;
-  picture: string;
-  locale: string;
-}
-
-export async function getGoogleUser({
-  id_token,
-  access_token,
-}: {
-  id_token: string;
-  access_token: string;
-}): Promise<GoogleUserResult> {
-  try {
-    const { data } = await axios.get<GoogleUserResult>(
-      `https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${access_token}`,
-      {
-        headers: {
-          Authorization: `Bearer ${id_token}`,
-        },
-      }
-    );
-
-    return data;
-  } catch (err: any) {
-    console.log(err);
-    throw Error(err);
-  }
-}
-
-// 👇 GitHub OAuth
-
 type GitHubOauthToken = {
   access_token: string;
 };
 
-interface GitHubUser {
+export interface GitHubUser {
   login: string;
   id: number;
   node_id: string;
@@ -151,18 +66,52 @@ export const getGithubOathToken = async ({
       },
     });
 
+    console.log(data);
     const decoded = qs.parse(data) as GitHubOauthToken;
 
     return decoded;
   } catch (err: any) {
-    throw Error(err);
+    err.message = err.response.data.message;
+    err.statusCode = err.response.status;
+    throw err;
   }
 };
 
-export const getGithubUser = async ({
+export const deleteGithubOauthToken = async (
+  access_token: string
+): Promise<GitHubOauthToken> => {
+  try {
+    const { data } = await axios.delete(
+      `https://api.github.com/applications/${GITHUB_OAUTH_CLIENT_ID}/token`,
+      {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
+        data: {
+          access_token,
+        },
+        auth: {
+          username: GITHUB_OAUTH_CLIENT_ID,
+          password: GITHUB_OAUTH_CLIENT_SECRET,
+        },
+      }
+    );
+
+    console.log(data);
+    const decoded = qs.parse(data) as GitHubOauthToken;
+    return decoded;
+  } catch (err: any) {
+    console.log(err);
+    err.message = err.response.data.message;
+    err.statusCode = err.response.status;
+    throw err;
+  }
+};
+
+export const getGithubOwnProfile = async ({
   access_token,
 }: {
-  access_token: string;
+  access_token?: string;
 }): Promise<GitHubUser> => {
   try {
     const { data } = await axios.get<GitHubUser>(
@@ -176,6 +125,9 @@ export const getGithubUser = async ({
 
     return data;
   } catch (err: any) {
-    throw Error(err);
+    // console.log(err.response);
+    err.message = err.response.data.message;
+    err.statusCode = err.response.status;
+    throw err;
   }
 };

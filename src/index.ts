@@ -1,12 +1,12 @@
 require("dotenv").config();
-import path from "path";
+import cookieParser from "cookie-parser";
+import cors from "cors";
 import express, { NextFunction, Request, Response } from "express";
 import morgan from "morgan";
-import cors from "cors";
-import cookieParser from "cookie-parser";
-import userRouter from "./routes/user.route";
+import path from "path";
 import authRouter from "./routes/auth.route";
 import sessionRouter from "./routes/session.route";
+import userRouter from "./routes/user.route";
 import connectDB from "./utils/prisma";
 
 const app = express();
@@ -28,7 +28,7 @@ app.use("/api/users", userRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/sessions", sessionRouter);
 
-app.get("/api/healthchecker", (req: Request, res: Response) => {
+app.get("/api/healthcheck", (req: Request, res: Response) => {
   res.status(200).json({
     status: "success",
     message: "Implement OAuth in Node.js",
@@ -52,7 +52,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   });
 });
 
-const port = 8000;
+const port = process.env.PORT;
 app.listen(port, () => {
   console.log(`✅ Server started on port: ${port}`);
   connectDB();
